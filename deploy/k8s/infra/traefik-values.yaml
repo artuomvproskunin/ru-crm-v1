@@ -1,0 +1,47 @@
+# Traefik ingress controller (Helm chart traefik/traefik).
+#
+#   helm upgrade --install traefik traefik/traefik \
+#     -n traefik --create-namespace -f deploy/k8s/infra/traefik-values.yaml
+#
+# The cluster (h3llo, KubeVirt) has no node external IPs; the public address
+# comes from a Service of type LoadBalancer provisioned by
+# kubevirt-cloud-controller-manager. Point the DNS A-record at that
+# EXTERNAL-IP:  kubectl get svc -n traefik traefik
+#
+# No HTTP→HTTPS redirect yet: cert-manager's HTTP-01 challenge must be
+# reachable on :80 first. Add it once certificates are issued.
+
+deployment:
+  replicas: 1   # raise to 2 once both worker nodes are Ready
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
+providers:
+  kubernetesIngress:
+    # Ingress objects report the LoadBalancer IP in their ADDRESS column.
+    publishedService:
+      enabled: true
+
+service:
+  type: LoadBalancer
+
+# Traefik v3 cuts reading a request after 60s by default — too short for
+# multi-file drop-off / WhatsApp archive uploads on a slow link.
+ports:
+  web:
+    transport:
+      respondingTimeouts:
+        readTimeout: 300s
+  websecure:
+    transport:
+      respondingTimeouts:
+        readTimeout: 300s
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi

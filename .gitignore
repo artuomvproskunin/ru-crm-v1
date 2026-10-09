@@ -17,10 +17,6 @@
 /.next/
 /out/
 
-# vercel workflow SDK auto-generated route handlers (rebuilt on `next dev` /
-# `next build`; the source of truth is /src/workflows/*.workflow.ts)
-/src/app/.well-known/workflow/
-
 # production
 /build
 
@@ -66,3 +62,8 @@ stale-ui-updates.md
 
 # data imports
 /WhatsAppChatHistory
+
+.idea
+
+docs/deploy
+OVERVIEW.md

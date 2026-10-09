@@ -1,8 +1,10 @@
 import type { NextConfig } from "next"
-import { withWorkflow } from "workflow/next"
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Self-contained server bundle (`.next/standalone/server.js` + only the
+  // node_modules it actually traces) — what the Docker runtime image ships.
+  output: "standalone",
   // Node-only packages that must NOT be bundled — they pull in native/CJS
   // internals (e.g. imapflow uses BigInt + node streams) that break when
   // Turbopack inlines them into the server build ("s.BigInt is not a
@@ -19,7 +21,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-// `withWorkflow` registers the build-time hooks the Vercel Workflow
-// SDK needs to compile `'use workflow'` / `'use step'` directives into
-// durable function routes.
-export default withWorkflow(nextConfig)
+export default nextConfig

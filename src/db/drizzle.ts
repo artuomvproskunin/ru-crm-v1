@@ -1,22 +1,35 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import { schema } from './schema';
 
-// Force a fresh connection per request instead of reusing a pooled
-// keep-alive socket. On this dev machine's network, idle Neon HTTP
-// connections were getting silently dropped (some middlebox/router/AV
-// between here and Neon's eu-central-1 endpoint appears to kill idle
-// sockets), so the next query reused over that half-dead connection failed
-// with ECONNRESET/"fetch failed" — intermittent, but frequent enough to
-// make every page ("no cards"/"no companies") look like data loss. `curl`
-// never hit this because it opens a brand-new connection on every call,
-// which is what we now force here too. Costs one extra TLS handshake per
-// query (Neon's edge responds in ~200-300ms either way), trading a little
-// latency for not silently failing.
-neonConfig.fetchFunction = (url: string | URL, init?: RequestInit) =>
-  fetch(url, {
-    ...init,
-    headers: { ...(init?.headers ?? {}), Connection: 'close' },
+// Plain TCP Postgres via node-postgres (works against the managed Postgres
+// in production and against Neon's direct endpoint locally). `db.execute`
+// resolves to `{ rows }` — same shape the old neon-http driver returned,
+// so the raw-SQL call sites (products, analytics) are unaffected.
+//
+// The pool is cached on `globalThis` so `next dev` HMR doesn't open a new
+// pool on every reload. DATABASE_POOL_MAX caps connections per process —
+// keep `replicas × max` under the managed instance's connection limit.
+const globalForDb = globalThis as unknown as { pgPool?: Pool };
+
+const pool =
+  globalForDb.pgPool ??
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: Number(process.env.DATABASE_POOL_MAX ?? 10),
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+    // The DB is reached over a public IP; keep idle sockets alive so a
+    // NAT/LB in between doesn't silently drop them.
+    keepAlive: true,
   });
 
-export const db = drizzle(process.env.DATABASE_URL!, { schema });
+if (process.env.NODE_ENV !== 'production') globalForDb.pgPool = pool;
+
+// A dropped idle connection must not crash the process — the pool just
+// discards it and opens a new one on the next query.
+pool.on('error', (err) => {
+  console.error('[db] idle client error:', err.message);
+});
+
+export const db = drizzle(pool, { schema });

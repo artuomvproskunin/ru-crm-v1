@@ -8,10 +8,6 @@ import { BadgeCheck, BadgeAlert } from "lucide-react"
 import UpdateUserDialog from "@/components/forms/form-edit-user"
 import ResetPasswordForm from "@/components/forms/form-reset-password"
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { Separator } from "@/components/ui/separator"
-import { PolarCustomerState } from "@/types/polar"
-import { TableUserOrders } from "@/components/tables/table-user-orders"
 import { TableUserUsage } from "@/components/tables/table-user-usage"
 import { TableUserApiKeys } from "@/components/tables/table-user-api-keys"
 import UpdateOrganizationDialog from "@/components/forms/form-edit-organization"
@@ -30,12 +26,11 @@ type User = {
   image?: string | null | undefined
 }
 
-// Billing + API-key surfaces are BUILT BUT NOT IN PRODUCTION. They are hidden
-// for every organisation until the Polar billing flow actually goes live —
-// their markup and the tables they render are deliberately kept, not deleted.
-// Flip this to `true` to bring all four cards back at once:
-//   • Управление API-ключами   • Баланс счёта
-//   • История покупок          • История использования
+// API-key + usage surfaces are BUILT BUT NOT IN PRODUCTION. They are hidden
+// for every organisation until billing goes live. (Polar billing — balance,
+// checkout, purchase history — was removed; RU-market billing is a separate
+// later step.) Flip this to `true` to bring both cards back:
+//   • Управление API-ключами   • История использования
 // (Typed as `boolean` on purpose so the JSX below is not analysed as dead.)
 const SHOW_PREVIEW_BILLING_BLOCKS: boolean = false
 
@@ -45,30 +40,11 @@ export default function AccountPage() {
   const { data: session, refetch } = authClient.useSession()
   const user = session?.user as User | undefined
 
-  const [userState, setUserState] = useState<PolarCustomerState>()
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [memberRole, setMemberRole] = useState<string | null>(null)
   const [orgKey, setOrgKey] = useState(0)
 
   //console.log("User session in settings page:", session)
-
-  useEffect(() => {
-    async function fetchUserState() {
-      if (!user?.id) return
-      try {
-        const res = await fetch(
-          `/api/auth/polar/state?id=${encodeURIComponent(user.id)}`,
-        )
-        const userState = await res.json()
-        setUserState(userState)
-        // console.log("Polar user state:", userState)
-      } catch (e) {
-        console.error("Failed to fetch Polar user state:", e)
-      }
-    }
-
-    fetchUserState()
-  }, [user?.id])
 
   useEffect(() => {
     async function fetchOrganization() {
@@ -289,138 +265,6 @@ export default function AccountPage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <TableUserApiKeys />
-                </CardContent>
-              </Card>
-
-              <Card className="w-full">
-                <CardHeader className="flex flex-row items-center gap-6 justify-start">
-                  <CardTitle className="text-xl font-medium">
-                    Баланс счёта — ТОЛЬКО ПРЕДПРОСМОТР
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex flex-row gap-4 items-center justify-start mb-6">
-                    <span className="font-medium dark:text-gray-400 text-gray-500">
-                      Текущий баланс (EUR):
-                    </span>
-                    <span className="text-xl font-bold border border-gray-500 px-2 rounded-md">
-                      12.30
-                    </span>
-                    <span className="font-medium dark:text-gray-400 text-gray-500 ml-8">
-                      Текущий баланс (токены):
-                    </span>
-                    <span className="text-xl font-bold border border-gray-500 px-2 rounded-md">
-                      1,230
-                    </span>
-                  </div>
-                  <Separator />
-                  <div>Купить кредиты</div>
-                  <div className="flex flex-row items-center justify-between">
-                    <div className="border-2 border-gray-200 dark:border-gray-700 rounded-md py-4 px-6">
-                      <div className="grid grid-cols-2 grid-rows-4 gap-x-6 gap-y-2">
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Продукт:
-                        </span>
-                        <span className="font-bold text-lime-600 border border-gray-500 px-2 rounded-md text-center">
-                          STARTER
-                        </span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Цена (EUR):
-                        </span>
-                        <span>20.00</span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Монеты:
-                        </span>
-                        <span>2,000</span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Тип покупки:
-                        </span>
-                        <span>Разовая</span>
-                      </div>
-                      <div className="flex flex-row gap-4 items-center justify-center mt-6">
-                        <Link
-                          href="https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_L6wreTRQmMcJQeLVILkTtzuDkb0DOe41PZffJ3jNxv8/redirect"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Button>Купить</Button>
-                        </Link>
-                      </div>
-                    </div>
-                    <div className="border-2 border-gray-200 dark:border-gray-700 rounded-md py-4 px-6">
-                      <div className="grid grid-cols-2 grid-rows-4 gap-x-6 gap-y-2">
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Продукт:
-                        </span>
-                        <span className="font-bold text-blue-500 border border-gray-500 px-2 rounded-md text-center">
-                          PRO
-                        </span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Цена (EUR):
-                        </span>
-                        <span>100.00</span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Монеты:
-                        </span>
-                        <span>10,000</span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Тип покупки:
-                        </span>
-                        <span>Разовая</span>
-                      </div>
-                      <div className="flex flex-row gap-4 items-center justify-center mt-6">
-                        <Link
-                          href="https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_L6wreTRQmMcJQeLVILkTtzuDkb0DOe41PZffJ3jNxv8/redirect"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Button>Купить</Button>
-                        </Link>
-                      </div>
-                    </div>
-                    <div className="border-2 border-gray-200 dark:border-gray-700 rounded-md py-4 px-6">
-                      <div className="grid grid-cols-2 grid-rows-4 gap-x-6 gap-y-2">
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Продукт:
-                        </span>
-                        <span className="font-bold text-pink-500 border border-gray-500 px-2 rounded-md text-center">
-                          ULTIMATE
-                        </span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Цена (EUR):
-                        </span>
-                        <span>500.00</span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Монеты:
-                        </span>
-                        <span>50,000</span>
-                        <span className="font-medium dark:text-gray-400 text-gray-500">
-                          Тип покупки:
-                        </span>
-                        <span>Разовая</span>
-                      </div>
-                      <div className="flex flex-row gap-4 items-center justify-center mt-6">
-                        <Link
-                          href="https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_L6wreTRQmMcJQeLVILkTtzuDkb0DOe41PZffJ3jNxv8/redirect"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Button>Купить</Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="w-full">
-                <CardHeader className="flex flex-row items-center gap-6 justify-start">
-                  <CardTitle className="text-xl font-medium">
-                    История покупок — ТОЛЬКО ПРЕДПРОСМОТР
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <TableUserOrders userId={userState?.id} />
                 </CardContent>
               </Card>
 
