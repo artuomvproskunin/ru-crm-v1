@@ -1,7 +1,7 @@
 # Public entry via Traefik (deploy/k8s/infra/traefik-values.yaml).
 #
-# TLS: cert-manager issues `salesdaily-tls` once the ClusterIssuer exists
-# and DNS for salesdaily.ru points at the Traefik LoadBalancer IP. Until
+# TLS: cert-manager issues `dev-salesdaily-tls` once the ClusterIssuer exists
+# and DNS for dev.salesdaily.ru points at the Traefik LoadBalancer IP. Until
 # then Traefik serves its default self-signed certificate on :443 and
 # plain HTTP works on :80.
 apiVersion: networking.k8s.io/v1
@@ -14,10 +14,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - salesdaily.ru
-      secretName: salesdaily-tls
+        - dev.salesdaily.ru
+      secretName: dev-salesdaily-tls
   rules:
-    - host: salesdaily.ru
+    - host: dev.salesdaily.ru
       http:
         paths:
           - path: /

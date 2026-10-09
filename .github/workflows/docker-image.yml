@@ -1,12 +1,14 @@
 # Build the Next.js standalone image (see Dockerfile) and push it to GHCR.
 #
 # Tags pushed:
-#   ghcr.io/<owner>/<repo>:sha-<short>   — every build (immutable; deploy THIS)
-#   ghcr.io/<owner>/<repo>:<branch>      — moving tag per branch
-#   ghcr.io/<owner>/<repo>:latest        — main only
+#   ghcr.io/<owner>/<repo>:dev-sha-<short>  — every build (immutable; deploy THIS)
+#   ghcr.io/<owner>/<repo>:dev-<branch>     — moving tag per branch
 #
-# Repo settings → Secrets and variables → Actions → Variables:
-#   NEXT_PUBLIC_APP_URL         (required, e.g. https://salesdaily.ru)
+# The `dev-` prefix matters: NEXT_PUBLIC_* are baked in at build time, so a
+# dev image (dev.salesdaily.ru) must never be deployed to prod.
+#
+# Settings → Environments → dev → Environment variables:
+#   NEXT_PUBLIC_APP_URL         (required — dev: https://dev.salesdaily.ru, prod: https://salesdaily.ru)
 #   NEXT_PUBLIC_PRODUCTION_URL  (optional)
 # NEXT_PUBLIC_* are baked into the client bundle at build time — changing
 # them means a rebuild, not a pod restart. No secrets are needed here:
@@ -31,6 +33,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # NEXT_PUBLIC_* live in the GitHub Environment `dev` (Settings →
+    # Environments), not as repository variables.
+    environment: dev
     steps:
       # Private-repo runners have ~7 GB RAM; `next build` peaks near that.
       # Extra swap turns an OOM kill into a slower build.
@@ -50,7 +55,7 @@ jobs:
           NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
         run: |
           if [ -z "$NEXT_PUBLIC_APP_URL" ]; then
-            echo "::error::Repository variable NEXT_PUBLIC_APP_URL is not set"
+            echo "::error::Variable NEXT_PUBLIC_APP_URL is not set in GitHub Environment dev"
             exit 1
           fi
 
@@ -67,9 +72,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=sha,prefix=sha-
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=dev-sha-
+            type=ref,event=branch,prefix=dev-
 
       - uses: docker/build-push-action@v6
         with:

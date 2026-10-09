@@ -15,7 +15,7 @@ resources:
   - cronjob.yaml
 images:
   - name: ghcr.io/artuomvproskunin/ru-crm-v1
-    # Deploy an immutable sha-<commit> tag from the docker-image workflow:
+    # Deploy an immutable dev-sha-<commit> tag from the docker-image workflow:
     #   cd deploy/k8s/app && kustomize edit set image \
-    #     ghcr.io/artuomvproskunin/ru-crm-v1=ghcr.io/artuomvproskunin/ru-crm-v1:sha-<short>
-    newTag: design
+    #     ghcr.io/artuomvproskunin/ru-crm-v1=ghcr.io/artuomvproskunin/ru-crm-v1:dev-sha-<short>
+    newTag: dev-design
