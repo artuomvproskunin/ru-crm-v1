@@ -18,4 +18,4 @@ images:
     # Deploy an immutable dev-sha-<commit> tag from the docker-image workflow:
     #   cd deploy/k8s/app && kustomize edit set image \
     #     ghcr.io/artuomvproskunin/ru-crm-v1=ghcr.io/artuomvproskunin/ru-crm-v1:dev-sha-<short>
-    newTag: dev-design
+    newTag: dev-sha-c0460f3

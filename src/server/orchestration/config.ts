@@ -8,7 +8,7 @@
 export const ORCHESTRATION_CONFIG = {
   // Cron schedule expression (UTC). Daily at 03:00 UTC.
   //
-  // **Duplicated in the Helm chart's CronJob schedule** (the scheduler
+  // **Duplicated in deploy/k8s/app/cronjob.yaml** (the scheduler
   // lives in Kubernetes, not in the app). Keep both in sync until
   // PHASE2 #12 moves them to a system_settings dictionary.
   cron: "0 3 * * *",
