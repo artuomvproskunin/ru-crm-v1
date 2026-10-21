@@ -495,7 +495,7 @@ export function ExploreSourcesDialog({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Подходят только элементы, которые разобраны и загружены в R2.
+              Подходят только элементы, которые разобраны и загружены в хранилище.
             </p>
           </section>
         </div>

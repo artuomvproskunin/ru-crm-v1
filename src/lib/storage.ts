@@ -6,40 +6,48 @@ import {
   DeleteObjectsCommand,
 } from "@aws-sdk/client-s3"
 
-// R2 is S3-compatible. The endpoint can be either the global form
-// (`https://<account>.r2.cloudflarestorage.com`) or a jurisdictional one
-// (`https://<account>.eu.r2.cloudflarestorage.com`). We trust whatever the
-// env var holds and only fall back to the constructed global URL.
-const accountId = process.env.R2_ACCOUNT_ID
-const accessKeyId = process.env.R2_ACCESS_KEY_ID
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-const bucketName = process.env.R2_BUCKET_NAME
-const endpoint =
-  process.env.R2_PUBLIC_URL ??
-  (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined)
+// Object storage for parsed-markdown blobs — any S3-compatible store; the
+// Kubernetes deployment uses h3llo S3 (Ceph Object Gateway,
+// `https://storage.h3llo.cloud`). The endpoint carries no bucket name, so the
+// bucket comes from its own variable and is addressed path-style
+// (`<endpoint>/<bucket>/<key>`).
+const endpoint = process.env.S3_ENDPOINT
+const accessKeyId = process.env.S3_ACCESS_KEY_ID
+const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY
+const bucketName = process.env.S3_BUCKET
+// Ceph doesn't check the region in the signature; "us-east-1" is the
+// conventional placeholder. A store that does care names the expected
+// region in its `AuthorizationHeaderMalformed` error — set S3_REGION to it.
+const region = process.env.S3_REGION || "us-east-1"
 
 let cachedClient: S3Client | null = null
 
 function getClient(): S3Client {
   if (cachedClient) return cachedClient
-  if (!accessKeyId || !secretAccessKey || !endpoint) {
+  if (!endpoint || !accessKeyId || !secretAccessKey) {
     throw new Error(
-      "R2 not configured: set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_PUBLIC_URL (or R2_ACCOUNT_ID).",
+      "Object storage not configured: set S3_ENDPOINT, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY.",
     )
   }
   cachedClient = new S3Client({
-    region: "auto",
+    region,
     endpoint,
+    forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey },
+    // SDK ≥ 3.729 adds CRC32 checksums to every request by default; not
+    // every S3-compatible store accepts them. Only send / validate checksums
+    // where the operation requires one (DeleteObjects).
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   })
   return cachedClient
 }
 
-export async function putMarkdownToR2(
+export async function putMarkdown(
   key: string,
   markdown: string,
 ): Promise<{ key: string; sizeBytes: number }> {
-  if (!bucketName) throw new Error("R2_BUCKET_NAME is not configured")
+  if (!bucketName) throw new Error("S3_BUCKET is not configured")
   const body = new TextEncoder().encode(markdown)
   await getClient().send(
     new PutObjectCommand({
@@ -57,10 +65,10 @@ export async function putMarkdownToR2(
 // DeleteObjects caps at 1000 keys per call, so we chunk. Idempotent: deleting
 // a missing key is a no-op (S3 returns success for absent keys). Empty input
 // short-circuits. Returns the count of keys requested for deletion.
-export async function deleteFromR2(keys: string[]): Promise<number> {
+export async function deleteObjects(keys: string[]): Promise<number> {
   const cleaned = keys.filter((k) => typeof k === "string" && k.length > 0)
   if (cleaned.length === 0) return 0
-  if (!bucketName) throw new Error("R2_BUCKET_NAME is not configured")
+  if (!bucketName) throw new Error("S3_BUCKET is not configured")
   const client = getClient()
   for (let i = 0; i < cleaned.length; i += 1000) {
     const chunk = cleaned.slice(i, i + 1000)
@@ -74,12 +82,12 @@ export async function deleteFromR2(keys: string[]): Promise<number> {
   return cleaned.length
 }
 
-export async function getMarkdownFromR2(key: string): Promise<string> {
-  if (!bucketName) throw new Error("R2_BUCKET_NAME is not configured")
+export async function getMarkdown(key: string): Promise<string> {
+  if (!bucketName) throw new Error("S3_BUCKET is not configured")
   const res = await getClient().send(
     new GetObjectCommand({ Bucket: bucketName, Key: key }),
   )
-  if (!res.Body) throw new Error(`R2 object empty: ${key}`)
+  if (!res.Body) throw new Error(`Storage object empty: ${key}`)
   // The S3 SDK's `Body` exposes a `.transformToString()` helper that
   // handles both Node Readable and web ReadableStream variants.
   return await res.Body.transformToString("utf-8")

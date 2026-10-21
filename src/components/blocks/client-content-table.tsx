@@ -407,7 +407,7 @@ export function ClientContentTable({
                         onClick={() => openPreview(row)}
                         title={
                           canPreview
-                            ? "Просмотр разобранного текста из R2"
+                            ? "Просмотр разобранного текста из хранилища"
                             : "Просмотр недоступен"
                         }
                       >
