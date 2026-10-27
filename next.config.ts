@@ -10,6 +10,16 @@ const nextConfig: NextConfig = {
   // Turbopack inlines them into the server build ("s.BigInt is not a
   // function"). Keep them external so they're require()'d at runtime.
   serverExternalPackages: ["imapflow", "mailparser", "node-ical", "exceljs"],
+  // node-ical require()s temporal-polyfill, which Node 22 resolves through
+  // the "module-sync" export (index.js + chunks/); Next's file tracing only
+  // copies the "require" entry (index.cjs), so the standalone image missed
+  // it and every route that loads the parsers failed with "Failed to load
+  // external module node-ical".
+  outputFileTracingIncludes: {
+    "/**/*": [
+      "./node_modules/.pnpm/temporal-polyfill@*/node_modules/temporal-polyfill/**",
+    ],
+  },
   experimental: {
     authInterrupts: true,
     serverActions: {
