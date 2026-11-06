@@ -59,8 +59,11 @@ kubectl -n salesdaily rollout restart deploy/crm
 
 ## 3. App
 
-Re-deploying a new release (build → tag → apply → verify → rollback):
-`docs/deploy/k8s-release.md`.
+Re-deploying a new release: **the `deploy` GitHub Actions workflow**
+(button, also rollback) — `docs/deploy/ci-deploy.md`; its cluster identity
+is `infra/github-deployer.yaml`. Manual fallback (build → tag → apply →
+verify → rollback): `docs/deploy/k8s-release.md`. The tag in
+`app/kustomization.yaml` is NOT what runs — the workflow overrides it.
 
 ```bash
 # pin the image built by the docker-image workflow

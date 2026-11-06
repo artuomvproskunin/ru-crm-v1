@@ -15,7 +15,9 @@ resources:
   - cronjob.yaml
 images:
   - name: ghcr.io/artuomvproskunin/ru-crm-v1
-    # Deploy an immutable dev-sha-<commit> tag from the docker-image workflow:
-    #   cd deploy/k8s/app && kustomize edit set image \
-    #     ghcr.io/artuomvproskunin/ru-crm-v1=ghcr.io/artuomvproskunin/ru-crm-v1:dev-sha-<short>
-    newTag: dev-sha-4a11452
+    # NOT the source of truth for what runs: the `deploy` workflow
+    # (.github/workflows/deploy.yml) overrides name + tag on its runner and
+    # never commits it. Don't `kubectl apply -k` from a laptop without first
+    # setting this to the tag that is running now — see docs/deploy/ci-deploy.md.
+    newTag: dev-sha-a4aca00
+
